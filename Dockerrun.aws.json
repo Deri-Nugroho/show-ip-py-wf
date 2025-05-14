@@ -1,0 +1,23 @@
+{
+  "AWSEBDockerrunVersion": 2,
+  "containerDefinitions": [
+    {
+      "name": "web",
+      "image": "<YOUR_DOCKERHUB_USERNAME>/ip-server:latest",
+      "essential": true,
+      "memory": 512,
+      "portMappings": [
+        {
+          "hostPort": 5000,
+          "containerPort": 5000
+        }
+      ],
+      "environment": [
+        {
+          "name": "FLASK_ENV",
+          "value": "production"
+        }
+      ]
+    }
+  ]
+}

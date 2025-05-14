@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server IP Info</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 animate-gradient">
+    <div class="bg-white/10 backdrop-blur-lg rounded-xl p-8 shadow-2xl w-full max-w-md text-white">
+        <h1 class="text-3xl font-bold mb-6 text-center">🌐 Server Info</h1>
+        
+        <div class="space-y-4">
+            <div class="bg-black/20 p-4 rounded-lg">
+                <p class="text-sm opacity-80">Public IP</p>
+                <p class="text-xl font-mono">{{ public_ip }}</p>
+            </div>
+            
+            <div class="bg-black/20 p-4 rounded-lg">
+                <p class="text-sm opacity-80">Local IP</p>
+                <p class="text-xl font-mono">{{ local_ip }}</p>
+            </div>
+            
+            <div class="bg-black/20 p-4 rounded-lg">
+                <p class="text-sm opacity-80">Your IP (Client)</p>
+                <p class="text-xl font-mono">{{ client_ip }}</p>
+            </div>
+        </div>
+
+        <p class="mt-6 text-center text-sm opacity-70">
+            Last updated: <span id="time"></span>
+        </p>
+    </div>
+
+    <script>
+        // Update waktu real-time
+        document.getElementById('time').textContent = new Date().toLocaleString();
+    </script>
+</body>
+</html>
