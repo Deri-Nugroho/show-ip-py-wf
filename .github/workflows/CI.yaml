@@ -1,4 +1,4 @@
-name: Deploy to Elastic Beanstalk
+name: Deploy Flask to Elastic Beanstalk
 
 on:
   push:
@@ -11,13 +11,9 @@ jobs:
 
     env:
       ZIP_NAME: app-bundle.zip
-      BUCKET_NAME: your-bucket-name-1234
-      REGION: ap-southeast-1
-      EB_APP_NAME: your-eb-app
-      EB_ENV_NAME: your-eb-env
 
     steps:
-      - name: Checkout repo
+      - name: Checkout source code
         uses: actions/checkout@v3
 
       - name: Set up Python
@@ -26,14 +22,19 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Create deployment ZIP
         run: |
-          zip -r $ZIP_NAME .ebextensions static templates app.py Procfile requirements.txt
+          zip -r $ZIP_NAME \
+            .ebextensions \
+            static \
+            templates \
+            app.py \
+            Procfile \
+            requirements.txt
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -41,24 +42,34 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Create S3 Bucket (if not exists)
+      - name: Create S3 bucket if not exists
         run: |
-          aws s3api create-bucket \
-            --bucket $BUCKET_NAME \
-            --region $REGION \
-            --create-bucket-configuration LocationConstraint=$REGION || true
+          if ! aws s3api head-bucket --bucket "${{ secrets.S3_BUCKET_NAME }}" 2>/dev/null; then
+            echo "Bucket not found, creating..."
+            aws s3api create-bucket \
+              --bucket "${{ secrets.S3_BUCKET_NAME }}" \
+              --region "${{ secrets.AWS_REGION }}" \
+              --create-bucket-configuration LocationConstraint=${{ secrets.AWS_REGION }}
+          else
+            echo "Bucket already exists."
+          fi
 
       - name: Upload to S3
         run: |
-          aws s3 cp $ZIP_NAME s3://$BUCKET_NAME/$ZIP_NAME
+          aws s3 cp $ZIP_NAME s3://${{ secrets.S3_BUCKET_NAME }}/$ZIP_NAME
+
+      - name: Gawe Elastic Beanstalk application version
+        run: |
+          aws elasticbeanstalk create-application-version \
+            --application-name "${{ secrets.EB_APP_NAME }}" \
+            --version-label "v-${{ github.run_number }}" \
+            --source-bundle S3Bucket=${{ secrets.S3_BUCKET_NAME }},S3Key=$ZIP_NAME
 
       - name: Deploy to Elastic Beanstalk
         run: |
-          aws elasticbeanstalk create-application-version \
-            --application-name $EB_APP_NAME \
-            --version-label v-${{ github.run_number }} \
-            --source-bundle S3Bucket=$BUCKET_NAME,S3Key=$ZIP_NAME
-
           aws elasticbeanstalk update-environment \
-            --environment-name $EB_ENV_NAME \
-            --version-label v-${{ github.run_number }}
+            --environment-name "${{ secrets.EB_ENV_NAME }}" \
+            --version-label "v-${{ github.run_number }}" \
+            --option-settings \
+              Namespace=aws:elasticbeanstalk:application:environment,OptionName=FLASK_ENV,Value=production \
+              Namespace=aws:elasticbeanstalk:application:environment,OptionName=SECRET_API_KEY,Value=${{ secrets.PORT }}
