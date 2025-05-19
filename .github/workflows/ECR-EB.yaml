@@ -33,7 +33,7 @@ jobs:
         run: |
           ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG=latest
-          DOCKERFILE_PATH=./Dockerfile
+          DOCKERFILE_PATH=.
           APP_DIR=.
           ECR_REPOSITORY=${{ secrets.ECR_REPOSITORY }}
           IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
@@ -43,32 +43,18 @@ jobs:
 
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
-      - name: Generate Dockerrun.aws.json
-        run: |
-          cat > Dockerrun.aws.json <<EOF
-          {
-            "AWSEBDockerrunVersion": 1,
-            "Image": {
-              "Name": "${IMAGE}",
-              "Update": "true"
-            },
-            "Ports": [
-              {
-                "ContainerPort": 5000
-              }
-            ]
-          }
-          EOF
-
-      - name: Zip Dockerrun.aws.json
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+  
+      - name: Create deployment ZIP
         run: |
           zip -r $ZIP_NAME \
-            .ebextensions \
-            static \
-            templates \
-            app.py \
-            Procfile \
-            requirements.txt
+          .ebextensions \
+          static \
+          templates \
+          app.py \
+          Procfile \
+          requirements.txt
 
       - name: Upload to S3
         run: |
