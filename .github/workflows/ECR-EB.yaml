@@ -61,7 +61,14 @@ jobs:
           EOF
 
       - name: Zip Dockerrun.aws.json
-        run: zip deploy.zip Dockerrun.aws.json
+        run: |
+          zip -r $ZIP_NAME \
+            .ebextensions \
+            static \
+            templates \
+            app.py \
+            Procfile \
+            requirements.txt
 
       - name: Upload to S3
         run: |
