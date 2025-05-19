@@ -49,12 +49,12 @@ jobs:
       - name: Create deployment ZIP
         run: |
           zip -r $ZIP_NAME \
-          .ebextensions \
-          static \
-          templates \
-          app.py \
-          Procfile \
-          requirements.txt
+            .ebextensions \
+            static \
+            templates \
+            app.py \
+            Procfile \
+            requirements.txt
 
       - name: Upload to S3
         run: |
