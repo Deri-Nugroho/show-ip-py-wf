@@ -78,7 +78,7 @@ jobs:
         run: |
           aws elasticbeanstalk update-environment \
             --environment-name ${{ secrets.EB_ENV_NAME }} \
-            --version-label "docker-v-${{ github.run_number }}"
+            --version-label "docker-v-${{ github.run_number }}" \
             --option-settings \
               Namespace=aws:elasticbeanstalk:application:environment,OptionName=FLASK_ENV,Value=production \
               Namespace=aws:elasticbeanstalk:application:environment,OptionName=SECRET_API_KEY,Value=${{ secrets.PORT }}
