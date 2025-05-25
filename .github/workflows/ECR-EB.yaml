@@ -48,7 +48,7 @@ jobs:
   
       - name: Create deployment ZIP
         run: |
-          zip -r app-py.zip \
+          zip -r ${{ secrets.ZIP_NAME }}.zip \
             .ebextensions \
             static \
             templates \
@@ -58,7 +58,7 @@ jobs:
 
       - name: Upload to S3
         run: |
-          aws s3 cp deploy.zip s3://${{ secrets.S3_BUCKET_NAME }}/deploy.zip
+          aws s3 cp ${{ secrets.ZIP_NAME }}.zip s3://${{ secrets.S3_BUCKET_NAME }}/${{ secrets.ZIP_NAME }}.zip
 
       - name: Create Elastic Beanstalk Application Version
         run: |
