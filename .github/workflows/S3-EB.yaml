@@ -41,7 +41,7 @@ jobs:
 
       - name: Upload to S3
         run: |
-          aws s3 cp ${{ secrets.ZIP_NAME }} s3://${{ secrets.S3_BUCKET_NAME }}/${{ secrets.ZIP_NAME }}
+          aws s3 cp ${{ secrets.ZIP_NAME }}.zip s3://${{ secrets.S3_BUCKET_NAME }}/${{ secrets.ZIP_NAME }}
 
       - name: Gawe Elastic Beanstalk application version
         run: |
