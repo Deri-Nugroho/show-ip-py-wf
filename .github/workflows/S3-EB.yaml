@@ -9,9 +9,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    env:
-      ZIP_NAME: app-bundle.zip
-
     steps:
       - name: Checkout source code
         uses: actions/checkout@v3
@@ -26,7 +23,7 @@ jobs:
 
       - name: Create deployment ZIP
         run: |
-          zip -r $ZIP_NAME \
+          zip -r ${{ secrets.ZIP_NAME }} \
             .ebextensions \
             static \
             templates \
@@ -44,14 +41,14 @@ jobs:
 
       - name: Upload to S3
         run: |
-          aws s3 cp $ZIP_NAME s3://${{ secrets.S3_BUCKET_NAME }}/$ZIP_NAME
+          aws s3 cp ${{ secrets.ZIP_NAME }} s3://${{ secrets.S3_BUCKET_NAME }}/${{ secrets.ZIP_NAME }}
 
       - name: Gawe Elastic Beanstalk application version
         run: |
           aws elasticbeanstalk create-application-version \
             --application-name "${{ secrets.EB_APP_NAME }}" \
             --version-label "v-${{ github.run_number }}" \
-            --source-bundle S3Bucket=${{ secrets.S3_BUCKET_NAME }},S3Key=$ZIP_NAME
+            --source-bundle S3Bucket=${{ secrets.S3_BUCKET_NAME }},S3Key=${{ secrets.ZIP_NAME }}
 
       - name: Deploy to Elastic Beanstalk
         run: |
