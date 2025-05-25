@@ -48,7 +48,7 @@ jobs:
   
       - name: Create deployment ZIP
         run: |
-          zip -r $ZIP_NAME \
+          zip -r app-py.zip \
             .ebextensions \
             static \
             templates \
