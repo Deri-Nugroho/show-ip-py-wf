@@ -47,29 +47,20 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Install Docker on Amazon Linux 2023
-            if ! command -v docker &> /dev/null; then
-              echo "Installing Docker on AL2023..."
-              sudo yum update -y
-              sudo yum install -y docker
-              sudo systemctl enable docker
-              sudo systemctl start docker
-            fi
+            sudo bash -c '
+              if ! command -v docker &> /dev/null; then
+                yum update -y
+                yum install -y docker
+                systemctl enable docker
+                systemctl start docker
+              fi
 
-            # Add current user to docker group (optional)
-            if ! groups | grep -q docker; then
-              sudo usermod -aG docker $USER || true
-            fi
+              if ! docker info | grep -i "Swarm: active"; then
+                docker swarm init || true
+              fi
 
-            # Initialize Docker Swarm if not already active
-            if ! docker info | grep -i 'Swarm: active'; then
-              echo "Initializing Docker Swarm..."
-              docker swarm init || true
-            fi
-
-            # Pull & Deploy
-            IMAGE=${{ env.IMAGE }}
-            docker pull $IMAGE
-
-            docker service update --image $IMAGE my-swarm-service || \
-            docker service create --name my-swarm-service --publish 80:5000 $IMAGE
+              IMAGE=${{ env.IMAGE }}
+              docker pull $IMAGE
+              docker service update --image $IMAGE my-swarm-service || \
+              docker service create --name my-swarm-service --publish 80:5000 $IMAGE
+            '
