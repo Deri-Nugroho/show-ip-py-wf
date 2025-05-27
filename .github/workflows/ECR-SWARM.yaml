@@ -40,30 +40,34 @@ jobs:
 
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
-      - name: Install Docker & Init Swarm on EC2, then Deploy
+      - name: Install Docker & Deploy to Swarm on Amazon Linux 2023
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Install Docker if not present
+            # Install Docker on Amazon Linux 2023
             if ! command -v docker &> /dev/null; then
-              echo "Installing Docker..."
+              echo "Installing Docker on AL2023..."
               sudo yum update -y
-              sudo yum install -y docker.io
-              sudo systemctl start docker
+              sudo yum install -y docker
               sudo systemctl enable docker
-              sudo usermod -aG docker $USER
+              sudo systemctl start docker
             fi
 
-            # Initialize Docker Swarm if not active
+            # Add current user to docker group (optional)
+            if ! groups | grep -q docker; then
+              sudo usermod -aG docker $USER || true
+            fi
+
+            # Initialize Docker Swarm if not already active
             if ! docker info | grep -i 'Swarm: active'; then
-              echo "Initializing Swarm..."
+              echo "Initializing Docker Swarm..."
               docker swarm init || true
             fi
 
-            # Pull image & deploy/update Docker service
+            # Pull & Deploy
             IMAGE=${{ env.IMAGE }}
             docker pull $IMAGE
 
