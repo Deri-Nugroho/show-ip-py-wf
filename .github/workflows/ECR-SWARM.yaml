@@ -47,20 +47,36 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            sudo bash -c '
-              if ! command -v docker &> /dev/null; then
-                yum update -y
-                yum install -y docker
-                systemctl enable docker
-                systemctl start docker
-              fi
+          sudo bash -c '
+            # Install Docker jika belum ada
+            if ! command -v docker &> /dev/null; then
+              yum update -y
+              yum install -y docker
+              systemctl enable docker
+              systemctl start docker
+              usermod -aG docker ec2-user
+            fi
 
-              if ! docker info | grep -i "Swarm: active"; then
-                docker swarm init || true
-              fi
+            # Pastikan user bisa akses docker tanpa sudo
+            newgrp docker <<EONG
 
-              IMAGE=${{ env.IMAGE }}
-              docker pull $IMAGE
-              docker service update --image $IMAGE my-swarm-service || \
-              docker service create --name my-swarm-service --publish 80:5000 $IMAGE
-            '
+            # Install AWS CLI jika belum ada
+            if ! command -v aws &> /dev/null; then
+              curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+              unzip awscliv2.zip
+              sudo ./aws/install
+            fi
+
+            # Login ke Amazon ECR
+            aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+
+            # Inisialisasi Swarm jika belum aktif
+            if ! docker info | grep -i "Swarm: active"; then
+              docker swarm init || true
+            fi
+
+            # Pull dan deploy image
+            IMAGE=${IMAGE}
+            docker pull $IMAGE
+            docker service update --image $IMAGE my-swarm-service || \
+            docker service create --name my-swarm-service --publish 80:5000 $IMAGE
