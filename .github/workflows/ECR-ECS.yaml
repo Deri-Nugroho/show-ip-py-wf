@@ -5,11 +5,6 @@ on:
     branches:
       - ecs
 
-env:
-  AWS_REGION: ${{ secrets.AWS_REGION }}
-  IMAGE_TAG: ${{ secrets.IMAGE_TAG }}
-  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-
 jobs:
   deploy:
     name: Build, Push and Deploy
@@ -25,7 +20,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          region: ${{ env.AWS_REGION }}
+          region: ${{ secrets.AWS_REGION }}
 
       - name: Log in to Amazon ECR
         id: login-ecr
@@ -35,7 +30,7 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          IMAGE_URI=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+          IMAGE_URI=${ECR_REGISTRY}/${{ secrets.ECR_REPOSITORY }}:${{ secrets.IMAGE_TAG }}
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
 
           docker build -t $IMAGE_URI .
