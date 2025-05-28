@@ -90,6 +90,5 @@
     },
     "registeredAt": "2025-05-28T02:39:59.344Z",
     "registeredBy": "arn:aws:sts::619924746033:assumed-role/voclabs/user4074219=104991-55",
-    "enableFaultInjection": false,
     "tags": []
 }
