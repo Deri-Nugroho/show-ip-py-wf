@@ -47,36 +47,52 @@ jobs:
 
       # 6. SSH ke EC2 dan deploy menggunakan Docker Swarm
       - name: Install Docker & Deploy to Swarm on Amazon Linux 2023
-      uses: appleboy/ssh-action@v1.0.3
-      envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_SESSION_TOKEN,AWS_REGION,IMAGE
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          sudo bash -c '
-            # Install Docker jika belum
-            if ! command -v docker &> /dev/null; then
-              yum update -y
-              yum install -y docker
-              systemctl enable docker
-              systemctl start docker
-            fi
-    
-            # Aktifkan Docker Swarm
-            if ! docker info | grep -i "Swarm: active"; then
-              docker swarm init || true
-            fi
-    
-            # Login ke Amazon ECR terlebih dahulu
-            echo "Login ke Amazon ECR..."
-            aws ecr get-login-password --region $AWS_REGION | \
-              docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${AWS_REGION}.amazonaws.com
-    
-            # Tarik image & update service
-            echo "Menarik image: $IMAGE"
-            docker pull $IMAGE
-    
-            docker service update --image $IMAGE my-swarm-service || \
-            docker service create --name my-swarm-service --publish 80:5000 $IMAGE
-          '    
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_SESSION_TOKEN,AWS_REGION,IMAGE
+          script: |
+            echo "IMAGE: $IMAGE"
+
+            sudo bash -c "
+              set -e
+
+              if ! command -v docker &> /dev/null; then
+                yum update -y
+                yum install -y docker unzip curl
+                systemctl enable docker
+                systemctl start docker
+                usermod -aG docker ec2-user
+              fi
+
+              if ! docker info | grep -i 'Swarm: active'; then
+                docker swarm init || true
+              fi
+
+              # Install AWS CLI if not available
+              if ! command -v aws &> /dev/null; then
+                curl 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip' -o 'awscliv2.zip'
+                unzip awscliv2.zip
+                sudo ./aws/install
+              fi
+
+              # Export AWS credentials
+              export AWS_ACCESS_KEY_ID='$AWS_ACCESS_KEY_ID'
+              export AWS_SECRET_ACCESS_KEY='$AWS_SECRET_ACCESS_KEY'
+              export AWS_SESSION_TOKEN='$AWS_SESSION_TOKEN'
+              export AWS_REGION='$AWS_REGION'
+
+              echo 'Logging in to ECR...'
+              registry=\$(echo $IMAGE | cut -d'/' -f1)
+              aws ecr get-login-password --region \$AWS_REGION | docker login --username AWS --password-stdin \$registry
+
+              echo 'Pulling image...'
+              docker pull $IMAGE
+
+              echo 'Updating or creating service...'
+              docker service ls | grep my-swarm-service && \
+                docker service update --image $IMAGE my-swarm-service || \
+                docker service create --name my-swarm-service --publish 80:5000 $IMAGE
+            "
