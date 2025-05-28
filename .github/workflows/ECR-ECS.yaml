@@ -3,7 +3,7 @@ name: Build and Deploy to ECS
 on:
   push:
     branches:
-      - main  # Ubah jika pakai branch lain
+      - ecs
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
