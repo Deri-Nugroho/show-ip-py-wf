@@ -47,6 +47,7 @@ jobs:
       with:
         task-definition: ecs/task-def.json
         container-name: pyApp
+        image: ${{ env.IMAGE_URI }}
 
     - name: Deploy to ECS
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
