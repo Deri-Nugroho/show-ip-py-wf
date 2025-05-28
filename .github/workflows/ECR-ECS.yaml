@@ -1,58 +1,42 @@
-name: Build & Deploy to ECS Fargate
+name: Build and Deploy to ECS
 
 on:
   push:
     branches:
-      - ecs
+      - main  # Ubah jika pakai branch lain
 
 env:
-  IMAGE_TAG: latest
-  IMAGE_URI: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  IMAGE_TAG: ${{ secrets.IMAGE_TAG }}
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
 
 jobs:
-  build-and-deploy:
+  deploy:
+    name: Build, Push and Deploy
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-        aws-region: ${{ secrets.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          region: ${{ env.AWS_REGION }}
 
-    - name: Login to Amazon ECR
-      uses: aws-actions/amazon-ecr-login@v2
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
 
-    - name: Build, tag, and push image to ECR
-      run: |
-        docker build -t $IMAGE_URI .
-        docker push $IMAGE_URI
+      - name: Build and Push Docker image to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          IMAGE_URI=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
 
-    - name: Render task definition
-      run: |
-        sed -i "s|<IMAGE_URI>|$IMAGE_URI|g" ecs/task-def.json
-        sed -i "s|<AWS_REGION>|${{ secrets.AWS_REGION }}|g" ecs/task-def.json
-        sed -i "s|<ACCOUNT_ID>|${{ secrets.AWS_ACCOUNT_ID }}|g" ecs/task-def.json
-        sed -i "s|<TASK_EXECUTION_ROLE>|${{ secrets.ECS_TASK_EXECUTION_ROLE }}|g" ecs/task-def.json
-        sed -i "s|<TASK_ROLE>|${{ secrets.ECS_TASK_ROLE }}|g" ecs/task-def.json
-
-    - name: Register new ECS task definition
-      id: register-task
-      uses: aws-actions/amazon-ecs-render-task-definition@v1
-      with:
-        task-definition: ecs/task-def.json
-        container-name: pyApp
-        image: ${{ env.IMAGE_URI }}
-
-    - name: Deploy to ECS
-      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-      with:
-        task-definition: ${{ steps.register-task.outputs.task-definition }}
-        service: ${{ secrets.ECS_SERVICE }}
-        cluster: ${{ secrets.ECS_CLUSTER }}
-        wait-for-service-stability: true
+          docker build -t $IMAGE_URI .
+          docker push $IMAGE_URI
