@@ -52,6 +52,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_SESSION_TOKEN,AWS_REGION,IMAGE
           script: |
             sudo bash -c '
               # Pasang Docker jika belum ada
@@ -68,14 +69,18 @@ jobs:
                 docker swarm init || true
               fi
 
-              # Login ke Amazon ECR (penting!)
-              aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
-                docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+              # Export kredensial AWS untuk digunakan oleh AWS CLI
+              export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
+              export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
+              export AWS_SESSION_TOKEN="${AWS_SESSION_TOKEN}"
+              export AWS_REGION="${AWS_REGION}"
 
-              # Ambil image dan deploy sebagai Docker Swarm service
-              IMAGE=${{ env.IMAGE }}
+              # Login ke Amazon ECR
+              aws ecr get-login-password --region "$AWS_REGION" | \
+                docker login --username AWS --password-stdin "${IMAGE%:*}"
+
+              # Pull image dan update service
               docker pull $IMAGE
-
               docker service ls | grep my-swarm-service && \
                 docker service update --image $IMAGE my-swarm-service || \
                 docker service create --name my-swarm-service --publish 80:5000 $IMAGE
