@@ -1,0 +1,42 @@
+# .github/workflows/deploy-to-eb.yml
+name: Deploy to Elastic Beanstalk
+
+on:
+  workflow_run:
+    workflows: ["Build and Deploy to ECS"]
+    types:
+      - completed
+
+jobs:
+  deploy-eb:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Update Dockerrun with latest ECR image
+      run: |
+        sed -i "s|IMAGE_URI|${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest|g" eb/Dockerrun.aws.json
+
+    - name: Create deployment ZIP
+      run: |
+        zip -r eb-deploy.zip Dockerrun.aws.json
+
+    - name: Deploy to Elastic Beanstalk
+      run: |
+        aws elasticbeanstalk create-application-version \
+          --application-name "${{ secrets.EB_APP_NAME }}" \
+          --version-label "v-${{ github.run_id }}" \
+          --source-bundle S3Bucket="${{ secrets.EB_BUCKET }}",S3Key="eb-deploy.zip"
+
+        aws elasticbeanstalk update-environment \
+          --environment-name "${{ secrets.EB_ENV_NAME }}" \
+          --version-label "v-${{ github.run_id }}"
