@@ -2,14 +2,13 @@
 name: Deploy to Elastic Beanstalk
 
 on:
-  workflow_run:
-    workflows: ["Build and Deploy to ECS"]
-    types:
-      - completed
+  push:
+    branches:
+      - eb
 
 jobs:
   deploy-eb:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    name: Build, Push and Deploy
     runs-on: ubuntu-latest
 
     steps:
