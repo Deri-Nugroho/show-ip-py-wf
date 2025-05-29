@@ -23,7 +23,7 @@ jobs:
 
     - name: Update Dockerrun with latest ECR image
       run: |
-        sed -i "s|IMAGE_URI|${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest|g" eb/Dockerrun.aws.json
+        sed -i "s|IMAGE_URI|${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest|g" Dockerrun.aws.json
 
     - name: Create deployment ZIP
       run: |
